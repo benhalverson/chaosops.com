@@ -1,0 +1,68 @@
+<div class="bg-slate-900 rounded border border-slate-700 p-4 flex flex-col flex-1 overflow-y-auto">
+  <h3 class="font-bold text-lg text-blue-400 mb-4">Root Cause Analysis</h3>
+
+  @if (isLoading()) {
+    <div class="text-slate-400 text-sm">
+      <p>Analyzing with Gemini AI...</p>
+      <div class="mt-2 text-xs text-slate-500">
+        <p>• Collecting event stream</p>
+        <p>• Analyzing fault interactions</p>
+        <p>• Generating explanation</p>
+      </div>
+    </div>
+  } @else if (error()) {
+    <div class="bg-red-900 border border-red-700 rounded p-3 text-red-100 text-sm">
+      <p>{{ error() }}</p>
+      <p class="text-xs mt-2">Using fallback analysis...</p>
+    </div>
+  } @else if (rca(); as analysis) {
+    <!-- Root Cause Section -->
+    <div class="mb-4">
+      <h4 class="font-semibold text-slate-300 mb-2">Root Cause</h4>
+      <p class="text-sm text-slate-200 bg-slate-800 p-3 rounded border-l-4 border-yellow-500">
+        {{ analysis.rootCause }}
+      </p>
+      <div class="mt-2 text-xs text-slate-400 flex items-center gap-2">
+        <span>🤖 {{ analysis.generatedBy === 'gemini' ? 'Gemini Analysis' : 'Fallback Analysis' }}</span>
+      </div>
+    </div>
+
+    <!-- Evidence Section -->
+    @if (analysis.evidence.length > 0) {
+      <div class="mb-4">
+        <h4 class="font-semibold text-slate-300 mb-2">Evidence (Key Events)</h4>
+        <div class="space-y-2">
+          @for (ev of analysis.evidence; track ev.seq) {
+            <div class="bg-slate-800 p-2 rounded text-xs border-l-4 border-blue-500">
+              <div class="flex justify-between items-start gap-2">
+                <div>
+                  <span class="font-mono text-slate-400">seq #{{ ev.seq }}</span>
+                  <span class="text-slate-400">{{ ev.eventType }}</span>
+                </div>
+                <span class="text-slate-500">t={{ ev.t.toFixed(1) }}s</span>
+              </div>
+              <p class="text-slate-300 mt-1">{{ ev.note }}</p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Recommended Fixes Section -->
+    @if (analysis.recommendedFix.length > 0) {
+      <div>
+        <h4 class="font-semibold text-slate-300 mb-2">Recommended Fixes</h4>
+        <div class="space-y-1">
+          @for (fix of analysis.recommendedFix; track $index) {
+            <div class="flex gap-2 text-xs text-slate-300 p-2 bg-slate-800 rounded">
+              <span class="text-green-400 flex-shrink-0">✓</span>
+              <span>{{ fix }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  } @else {
+    <p class="text-slate-400 text-sm">No analysis available</p>
+  }
+</div>

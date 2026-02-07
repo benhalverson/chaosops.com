@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
+pnpm-lock.yaml
+.next/
+out/
+.angular/

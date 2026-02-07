@@ -1,0 +1,67 @@
+<div class="bg-slate-900 rounded border border-slate-700 flex flex-col h-full">
+  <!-- Header -->
+  <div class="flex items-center justify-between p-4 border-b border-slate-700">
+    <h2 class="font-bold text-lg text-blue-400">Simulation Runs</h2>
+    <button
+      (click)="store.toggleCreateForm()"
+      class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm font-semibold"
+    >
+      + Create New Run
+    </button>
+  </div>
+
+  <!-- Runs table -->
+  <div class="flex-1 overflow-y-auto">
+    @if (store.runs().length > 0) {
+      <table class="w-full text-sm">
+        <thead class="sticky top-0 bg-slate-800 border-b border-slate-700">
+          <tr>
+            <th class="text-left px-4 py-2">Run ID</th>
+            <th class="text-left px-4 py-2">Status</th>
+            <th class="text-right px-4 py-2">Seed</th>
+            <th class="text-left px-4 py-2">Started</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (run of store.runs(); track run.id) {
+            <tr
+              (click)="store.selectRun(run)"
+              [class]="
+                store.selectedRun()?.id === run.id
+                  ? 'bg-slate-700'
+                  : 'hover:bg-slate-800'
+              "
+              class="border-b border-slate-700 cursor-pointer transition"
+            >
+              <td class="px-4 py-2 font-mono text-xs text-slate-300">
+                {{ run.id.substring(0, 8) }}...
+              </td>
+              <td class="px-4 py-2">
+                <span
+                  [class]="getStatusBadgeClass(run.status)"
+                  class="px-2 py-1 rounded text-xs font-semibold"
+                >
+                  {{ run.status }}
+                </span>
+              </td>
+              <td class="px-4 py-2 text-right font-mono">
+                {{ run.taskSpec.seed }}
+              </td>
+              <td class="px-4 py-2 text-xs text-slate-400">
+                @if (run.startedAt) {
+                  {{ run.startedAt | date: 'short' }}
+                } @else {
+                  —
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <div class="p-4 text-center text-slate-400">
+        <p>No runs yet. Create one to get started!</p>
+      </div>
+    }
+  </div>
+</div>

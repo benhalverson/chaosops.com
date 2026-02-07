@@ -1,0 +1,112 @@
+<div class="bg-slate-900 rounded border border-slate-700 p-4 flex flex-col max-h-96 overflow-y-auto">
+  <h2 class="font-bold text-lg text-blue-400 mb-4">Create New Run</h2>
+
+  <form (ngSubmit)="submitForm()" class="space-y-4 flex-1 flex flex-col">
+    <!-- Task Spec Section -->
+    <div class="space-y-3">
+      <h3 class="text-sm font-semibold text-slate-300">Task Spec</h3>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Seed</label>
+          <input
+            type="number"
+            [(ngModel)]="formData.seed"
+            name="seed"
+            class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+          />
+        </div>
+
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Max Time (s)</label>
+          <input
+            type="number"
+            [(ngModel)]="formData.maxTime"
+            name="maxTime"
+            class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+          />
+        </div>
+      </div>
+
+      <!-- Goal Position -->
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">Goal (x, y)</label>
+        <div class="grid grid-cols-2 gap-2">
+          <input
+            type="number"
+            placeholder="X"
+            [(ngModel)]="formData.goalX"
+            name="goalX"
+            class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+          />
+          <input
+            type="number"
+            placeholder="Y"
+            [(ngModel)]="formData.goalY"
+            name="goalY"
+            class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Fault Profile Section -->
+    <div class="space-y-3">
+      <h3 class="text-sm font-semibold text-slate-300">Fault Profile</h3>
+
+      <div class="space-y-2">
+        @for (fault of faultOptions; track fault.id) {
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              [checked]="isChecked(fault.id)"
+              (change)="toggleFault(fault.id)"
+              class="rounded"
+            />
+            <span class="text-sm text-slate-300">{{ fault.label }}</span>
+            @if (isChecked(fault.id)) {
+              <span class="ml-auto text-xs text-slate-400">
+                Severity: {{ getFaultSeverity(fault.id) }}
+              </span>
+            }
+          </label>
+
+          @if (isChecked(fault.id)) {
+            <div class="ml-6 space-y-1">
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                [(ngModel)]="faultSeverities[fault.id]"
+                [name]="'severity-' + fault.id"
+                class="w-full"
+              />
+              <p class="text-xs text-slate-400">
+                At: {{ getFaultTime(fault.id) }}s
+              </p>
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="flex gap-2 pt-2 mt-auto">
+      <button
+        type="button"
+        (click)="store.resetForm()"
+        class="flex-1 bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm font-semibold transition"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        [disabled]="isSubmitting"
+        class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-3 py-2 rounded text-sm font-semibold transition"
+      >
+        {{ isSubmitting ? 'Creating...' : 'Start Run' }}
+      </button>
+    </div>
+  </form>
+</div>
