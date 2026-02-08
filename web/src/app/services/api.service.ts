@@ -46,12 +46,26 @@ export interface RCAResult {
   providedIn: 'root'
 })
 export class ApiService {
-  private readonly apiUrl = signal('http://localhost:3000');
+  // Default to the local API host in development (Angular dev server on 4200).
+  // If the app is served from a production origin where the API is proxied,
+  // this will be an empty string and requests will be relative to the page.
+  private readonly apiUrl = signal(
+    (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+      ? 'http://localhost:3000'
+      : ''
+  );
+
+  private getBase(): string {
+    const url = this.apiUrl();
+    if (!url) return '';
+    return url.replace(/\/$/, '');
+  }
 
   // Health check resource
   health = resource({
     loader: async () => {
-      const response = await fetch(`${this.apiUrl()}`);
+      const base = this.getBase();
+      const response = await fetch(base ? `${base}/` : `/`);
       if (!response.ok) {
         throw new Error(`Health check failed: ${response.statusText}`);
       }
@@ -62,7 +76,8 @@ export class ApiService {
   // Runs list resource
   private runsListResource = resource({
     loader: async () => {
-      const response = await fetch(`${this.apiUrl()}/api/runs`);
+      const base = this.getBase();
+      const response = await fetch(base ? `${base}/api/runs` : `/api/runs`);
       if (!response.ok) throw new Error('Failed to fetch runs');
       return response.json();
     }
@@ -81,7 +96,8 @@ export class ApiService {
   }
 
   async createRun(taskSpec: TaskSpec, faultProfile: FaultProfile): Promise<Run> {
-    const response = await fetch(`${this.apiUrl()}/api/runs`, {
+    const base = this.getBase();
+    const response = await fetch(base ? `${base}/api/runs` : `/api/runs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ taskSpec, faultProfile })
@@ -91,7 +107,8 @@ export class ApiService {
   }
 
   async startRun(id: string) {
-    const response = await fetch(`${this.apiUrl()}/api/runs/${id}/start`, {
+    const base = this.getBase();
+    const response = await fetch(base ? `${base}/api/runs/${id}/start` : `/api/runs/${id}/start`, {
       method: 'POST'
     });
     if (!response.ok) throw new Error('Failed to start run');
@@ -99,13 +116,15 @@ export class ApiService {
   }
 
   async getRunEvents(id: string): Promise<Record<string, unknown>[]> {
-    const response = await fetch(`${this.apiUrl()}/api/runs/${id}/events`);
+    const base = this.getBase();
+    const response = await fetch(base ? `${base}/api/runs/${id}/events` : `/api/runs/${id}/events`);
     if (!response.ok) throw new Error('Failed to fetch events');
     return response.json() as Promise<Record<string, unknown>[]>;
   }
 
   async analyzeRun(id: string): Promise<RCAResult> {
-    const response = await fetch(`${this.apiUrl()}/api/runs/${id}/analyze`, {
+    const base = this.getBase();
+    const response = await fetch(base ? `${base}/api/runs/${id}/analyze` : `/api/runs/${id}/analyze`, {
       method: 'POST'
     });
     if (!response.ok) throw new Error('Failed to analyze run');

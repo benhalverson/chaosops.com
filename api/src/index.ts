@@ -10,6 +10,7 @@ import { listRunsDoc, createRunDoc, getRunDoc, startRunDoc, stopRunDoc } from '.
 import { listEventsDoc, recordEventsDoc } from './docs/events-docs.js';
 import { schemas } from './docs/schemas.js';
 import { analyzeRunWithGemini } from './services/gemini.js';
+import type { Run as DbRun } from './db/schema.js';
 
 type EventInput = {
   seq: number;
@@ -107,7 +108,15 @@ app.get('/api/runs/:id', async (c) => {
 });
 
 // Mock simulation runner
-async function runMockSimulation(runId: string, run: any) {
+type StoredEvent = {
+  runId: string;
+  seq: number;
+  t: number;
+  type: string;
+  payload: Record<string, unknown>;
+};
+
+async function runMockSimulation(runId: string, run: DbRun) {
   try {
     const taskSpec = run.taskSpec;
     const faultProfile = run.faultProfile;
@@ -115,7 +124,7 @@ async function runMockSimulation(runId: string, run: any) {
     const goal = taskSpec.goalPose;
     
     let eventSeq = 0;
-    const eventInserts: any[] = [];
+    const eventInserts: StoredEvent[] = [];
 
     // run.started event
     eventInserts.push({
@@ -308,7 +317,7 @@ app.post('/api/runs/:id/events', async (c) => {
       .set({
         status: 'completed',
         result: payload.result as string | undefined,
-        kpis: payload as any,
+        kpis: payload as Record<string, unknown>,
         endedAt: new Date()
       })
       .where(eq(schema.runs.id, id));

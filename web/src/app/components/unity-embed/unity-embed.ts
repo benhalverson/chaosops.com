@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RunsStore } from '../../services/runs.store';
 import { ApiService } from '../../services/api.service';
 import type { Run } from '../../services/api.service';
+import { ToastrService } from 'ngx-toastr';
 
 declare global {
   interface Window {
@@ -30,6 +31,8 @@ interface UnityInstance {
   styleUrl: './unity-embed.css',
 })
 export class UnityEmbed implements OnInit {
+    // ...existing code...
+
   store = inject(RunsStore);
   apiService = inject(ApiService);
 
@@ -174,17 +177,17 @@ export class UnityEmbed implements OnInit {
   async startSimulation() {
     const run = this.store.selectedRun();
     if (!run) {
-      alert('Please select a run first');
+      this.showNotification('Please select a run first', 'error');
       return;
     }
 
     if (this.isSimRunning()) {
-      alert('Simulation already running');
+      this.showNotification('Simulation already running', 'info');
       return;
     }
 
     if (!this.unityInstance) {
-      alert('Unity not loaded yet');
+      this.showNotification('Unity not loaded yet', 'error');
       return;
     }
 
@@ -201,16 +204,29 @@ export class UnityEmbed implements OnInit {
       this.apiService.refreshRunsList();
     } catch (err) {
       console.error('[UnityEmbed] Error starting simulation:', err);
-      alert('Failed to start simulation');
+      this.showNotification('Failed to start simulation', 'error');
     }
-  }
+      this.toastr.success('Simulation started successfully');
+    }
 
-  pauseSimulation() {
+    toastr = inject(ToastrService);
+
+    showNotification(msg: string, type: 'error' | 'info' | 'success' = 'info') {
+      if (type === 'error') {
+        this.toastr.error(msg);
+      } else if (type === 'success') {
+        this.toastr.success(msg);
+      } else {
+        this.toastr.info(msg);
+      }
+    }
+
+  pauseSimulation(): void {
     console.log('[UnityEmbed] Pause simulation (not yet implemented)');
     this.isSimRunning.set(false);
   }
 
-  resetSimulation() {
+  resetSimulation(): void {
     console.log('[UnityEmbed] Reset simulation (not yet implemented)');
     this.isSimRunning.set(false);
   }

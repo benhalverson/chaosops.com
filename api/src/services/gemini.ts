@@ -1,6 +1,10 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+function resolveGenerativeModel(): GenerativeModel {
+  return genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+}
 
 // Types
 interface Pose {
@@ -55,7 +59,7 @@ export interface RCAResult {
   rootCause: string;
   evidence: Array<{ t: number; seq: number; eventType: string; note: string }>;
   recommendedFix: string[];
-  generatedBy: 'gemini' | 'fallback';
+  generatedBy: 'gemini';
 }
 
 /**
@@ -75,9 +79,8 @@ export async function analyzeRunWithGemini(
         e.type === 'run.ended'
     );
 
-    if (relevantEvents.length === 0) {
-      return fallbackAnalysis(run, events);
-    }
+    // Proceed to call Gemini even if no "relevantEvents" were found; let the
+    // model reason over the full run and task spec.
 
     // Build prompt with context
     const taskSpec = run.taskSpec;
@@ -113,24 +116,22 @@ ANALYSIS REQUIRED:
 
 Format your response as JSON with keys: rootCause (string), evidence (array of {seq, note}), fixes (array of strings).`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = resolveGenerativeModel();
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
 
+    console.log('Gemini raw response:', responseText);
     // Extract JSON from response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.warn('No JSON found in Gemini response, using fallback');
-      return fallbackAnalysis(run, events);
+      console.warn('No JSON found in Gemini response');
+      throw new Error('No JSON found in Gemini response');
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
 
     // Map evidence seq numbers to actual events
-    const evidenceMap = new Map<
-      number,
-      { t: number; seq: number; eventType: string }
-    >();
+    const evidenceMap = new Map<number, { t: number; seq: number; eventType: string }>();
     relevantEvents.forEach((e) => {
       evidenceMap.set(e.seq, { t: e.t, seq: e.seq, eventType: e.type });
     });
@@ -156,59 +157,7 @@ Format your response as JSON with keys: rootCause (string), evidence (array of {
     };
   } catch (err) {
     console.error('Gemini API error:', err);
-    return fallbackAnalysis(run, events);
+    // Do not fall back — surface the error so caller can handle it.
+    throw err;
   }
-}
-
-/**
- * Fallback analysis when Gemini is unavailable
- */
-function fallbackAnalysis(run: Run, events: Event[]): RCAResult {
-  const violations = events.filter((e) => e.type.startsWith('violation.'));
-  const faults = events.filter((e) => e.type === 'fault.injected');
-  const lastViolation = violations[violations.length - 1];
-
-  let rootCause = 'Simulation ended without reaching goal';
-  let evidence: RCAResult['evidence'] = [];
-  let recommendedFix: string[] = [];
-
-  if (lastViolation) {
-    rootCause = `${lastViolation.payload.reason || 'Collision'} at t=${lastViolation.t}s`;
-    evidence = [
-      {
-        t: lastViolation.t,
-        seq: lastViolation.seq,
-        eventType: lastViolation.type,
-        note: 'Violation occurred'
-      }
-    ];
-
-    // Add fault info if present
-    if (faults.length > 0) {
-      const closestFault = faults.reduce((prev, curr) =>
-        Math.abs(curr.t - lastViolation.t) < Math.abs(prev.t - lastViolation.t)
-          ? curr
-          : prev
-      );
-      evidence.push({
-        t: closestFault.t,
-        seq: closestFault.seq,
-        eventType: closestFault.type,
-        note: `${closestFault.payload.faultType} triggered`
-      });
-    }
-
-    recommendedFix = [
-      'Reduce fault severity in profile',
-      'Increase planning horizon',
-      'Add constraint buffer around obstacles'
-    ];
-  }
-
-  return {
-    rootCause,
-    evidence,
-    recommendedFix,
-    generatedBy: 'fallback'
-  };
 }
